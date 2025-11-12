@@ -3,7 +3,7 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 exports.handler = async (event) => {
   // Set CORS headers
   const headers = {
-    'Access-Control-Allow-Origin': '*', // In production, replace with your Webflow domain
+    'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
   };
@@ -43,7 +43,7 @@ exports.handler = async (event) => {
             name: roomData.quantity > 1 ? `${roomData.quantity} x ${roomName}` : roomName,
             description: 'Room Package',
           },
-          unit_amount: Math.round(roomData.totalPrice * 100), // FIXED: Changed from unit_price to unit_amount
+          unit_amount: Math.round(roomData.totalPrice * 100),
         },
         quantity: 1,
       });
@@ -59,13 +59,13 @@ exports.handler = async (event) => {
             name: addonName,
             description: 'Addon',
           },
-          unit_amount: Math.round(addonData.price * 100), // FIXED: Changed from unit_price to unit_amount
+          unit_amount: Math.round(addonData.price * 100),
         },
         quantity: 1,
       });
     });
 
-    // Handle discounts
+    // Build session config
     const sessionConfig = {
       payment_method_types: ['card'],
       line_items: lineItems,
@@ -76,39 +76,37 @@ exports.handler = async (event) => {
         customer_phone: customer.phone,
         voucher_code: voucher ? voucher.code : '',
         subtotal: totals.subtotalBeforeDiscount.toString(),
-        discount: totals.discount.toString(),
+        multi_room_discount: totals.discount.toString(),
         voucher_discount: totals.voucherDiscount.toString(),
+        total_discount: (totals.discount + totals.voucherDiscount).toString(),
         final_total: totals.finalTotal.toString(),
       },
       success_url: successUrl + '?session_id={CHECKOUT_SESSION_ID}',
       cancel_url: cancelUrl,
     };
 
-    // Add discounts as coupons if there are any
-    const discounts = [];
+    // Combine all discounts into ONE coupon (Stripe limit)
+    const totalDiscount = totals.discount + totals.voucherDiscount;
     
-    if (totals.discount > 0) {
-      const multiRoomCoupon = await stripe.coupons.create({
-        amount_off: Math.round(totals.discount * 100),
+    if (totalDiscount > 0) {
+      // Build discount description
+      let discountDescription = '';
+      if (totals.discount > 0 && voucher && totals.voucherDiscount > 0) {
+        discountDescription = `Multi-room (15%) + Voucher ${voucher.code} (${voucher.amount}%)`;
+      } else if (totals.discount > 0) {
+        discountDescription = 'Multi-room discount (15%)';
+      } else if (voucher && totals.voucherDiscount > 0) {
+        discountDescription = `Voucher: ${voucher.code} (${voucher.amount}%)`;
+      }
+
+      const combinedCoupon = await stripe.coupons.create({
+        amount_off: Math.round(totalDiscount * 100),
         currency: 'gbp',
         duration: 'once',
-        name: 'Multi-room discount (15%)',
+        name: discountDescription,
       });
-      discounts.push({ coupon: multiRoomCoupon.id });
-    }
-
-    if (voucher && totals.voucherDiscount > 0) {
-      const voucherCoupon = await stripe.coupons.create({
-        amount_off: Math.round(totals.voucherDiscount * 100),
-        currency: 'gbp',
-        duration: 'once',
-        name: `Voucher: ${voucher.code} (${voucher.amount}%)`,
-      });
-      discounts.push({ coupon: voucherCoupon.id });
-    }
-
-    if (discounts.length > 0) {
-      sessionConfig.discounts = discounts;
+      
+      sessionConfig.discounts = [{ coupon: combinedCoupon.id }];
     }
 
     // Create Stripe Checkout Session
