@@ -37,9 +37,9 @@ exports.handler = async (event) => {
     try {
       // Send email using Resend
       await resend.emails.send({
-        from: 'Your Business <onboarding@resend.dev>', // Change this to your verified domain
+        from: 'Where Rooms Begin <onboarding@resend.dev>', // Update this to your verified domain
         to: session.customer_email,
-        subject: 'Booking Confirmation - Thank You!',
+        subject: 'Booking Confirmation',
         html: emailHtml,
       });
 
@@ -47,8 +47,8 @@ exports.handler = async (event) => {
 
       // Optional: Send a copy to yourself
       await resend.emails.send({
-        from: 'Your Business <onboarding@resend.dev>',
-        to: 'your-business-email@example.com', // Your email
+        from: 'Where Rooms Begin <onboarding@resend.dev>',
+        to: 'your-email@example.com', // Update with your business email
         subject: `New Booking from ${session.metadata.customer_name}`,
         html: emailHtml,
       });
@@ -64,30 +64,76 @@ exports.handler = async (event) => {
   };
 };
 
-// Build HTML email template
+// Build minimal black and white HTML email template
 function buildEmailHtml(session, lineItems) {
   const metadata = session.metadata;
   
-  // Build line items HTML
-  let itemsHtml = '';
+  // Separate rooms and add-ons
+  const rooms = [];
+  const addons = [];
+  
   lineItems.data.forEach(item => {
     const amount = (item.amount_total / 100).toFixed(2);
-    itemsHtml += `
+    const itemHtml = `
       <tr>
-        <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.description}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">£${amount}</td>
+        <td style="padding: 12px 0; border-bottom: 1px solid #e5e5e5;">${item.description}</td>
+        <td style="padding: 12px 0; border-bottom: 1px solid #e5e5e5; text-align: right;">£${amount}</td>
       </tr>
     `;
+    
+    // Simple check: if description contains common add-on keywords
+    if (item.description.toLowerCase().includes('sketch') || 
+        item.description.toLowerCase().includes('track') || 
+        item.description.toLowerCase().includes('swatch') ||
+        item.description.toLowerCase().includes('addon') ||
+        item.description.toLowerCase().includes('add-on')) {
+      addons.push(itemHtml);
+    } else {
+      rooms.push(itemHtml);
+    }
   });
 
-  // Build discount HTML if applicable
-  let discountHtml = '';
-  if (parseFloat(metadata.total_discount) > 0) {
-    discountHtml = `
-      <tr>
-        <td style="padding: 10px; border-bottom: 1px solid #eee; color: #16a34a;"><strong>Total Savings</strong></td>
-        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right; color: #16a34a;"><strong>-£${parseFloat(metadata.total_discount).toFixed(2)}</strong></td>
-      </tr>
+  const roomsHtml = rooms.join('');
+  const addonsHtml = addons.join('');
+
+  // Build savings section
+  let savingsHtml = '';
+  const multiRoomDiscount = parseFloat(metadata.multi_room_discount || 0);
+  const voucherDiscount = parseFloat(metadata.voucher_discount || 0);
+  const totalDiscount = parseFloat(metadata.total_discount || 0);
+
+  if (totalDiscount > 0) {
+    let savingsRows = '';
+    
+    if (multiRoomDiscount > 0) {
+      savingsRows += `
+        <tr>
+          <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5;">Multi-room discount (15%)</td>
+          <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5; text-align: right;">-£${multiRoomDiscount.toFixed(2)}</td>
+        </tr>
+      `;
+    }
+    
+    if (voucherDiscount > 0) {
+      savingsRows += `
+        <tr>
+          <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5;">Voucher (${metadata.voucher_code})</td>
+          <td style="padding: 8px 0; border-bottom: 1px solid #e5e5e5; text-align: right;">-£${voucherDiscount.toFixed(2)}</td>
+        </tr>
+      `;
+    }
+
+    savingsHtml = `
+      <div style="margin: 40px 0;">
+        <h2 style="margin: 0 0 20px 0; font-size: 14px; font-weight: 400; letter-spacing: 2px; text-transform: uppercase; color: #000;">Savings</h2>
+        <table style="width: 100%; border-collapse: collapse;">
+          ${savingsRows}
+          <tr>
+            <td style="padding: 12px 0;">Total savings</td>
+            <td style="padding: 12px 0; text-align: right;">-£${totalDiscount.toFixed(2)}</td>
+          </tr>
+        </table>
+      </div>
     `;
   }
 
@@ -99,65 +145,109 @@ function buildEmailHtml(session, lineItems) {
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Booking Confirmation</title>
     </head>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background-color: #ffffff; color: #000000;">
       
-      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 28px;">Booking Confirmed! 🎉</h1>
-      </div>
-      
-      <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px;">
-        
-        <p style="font-size: 16px; margin-bottom: 20px;">
-          Hi <strong>${metadata.customer_name}</strong>,
-        </p>
-        
-        <p style="font-size: 16px; margin-bottom: 30px;">
-          Thank you for your booking! Your payment has been successfully processed. Here are your booking details:
-        </p>
+      <table cellpadding="0" cellspacing="0" style="width: 100%; max-width: 600px; margin: 0 auto; padding: 60px 20px;">
+        <tr>
+          <td>
+            
+            <!-- Header -->
+            <div style="text-align: center; margin-bottom: 60px;">
+              <h1 style="margin: 0; font-size: 24px; font-weight: 400; letter-spacing: 2px; text-transform: uppercase;">Booking Confirmed</h1>
+            </div>
 
-        <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 30px;">
-          <h2 style="margin-top: 0; color: #667eea; font-size: 20px;">Booking Details</h2>
-          
-          <table style="width: 100%; border-collapse: collapse;">
-            ${itemsHtml}
-            ${discountHtml}
-            <tr>
-              <td style="padding: 15px 10px 10px 10px;"><strong style="font-size: 18px;">Total Paid</strong></td>
-              <td style="padding: 15px 10px 10px 10px; text-align: right;"><strong style="font-size: 18px; color: #667eea;">£${(session.amount_total / 100).toFixed(2)}</strong></td>
-            </tr>
-          </table>
-        </div>
+            <!-- Greeting -->
+            <p style="margin: 0 0 40px 0; font-size: 16px; line-height: 1.6;">
+              Hi ${metadata.customer_name},
+            </p>
+            
+            <p style="margin: 0 0 40px 0; font-size: 16px; line-height: 1.6;">
+              Thank you for your booking. Your payment has been successfully processed.
+            </p>
 
-        <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 30px;">
-          <h2 style="margin-top: 0; color: #667eea; font-size: 20px;">Contact Information</h2>
-          <p style="margin: 5px 0;"><strong>Name:</strong> ${metadata.customer_name}</p>
-          <p style="margin: 5px 0;"><strong>Email:</strong> ${session.customer_email}</p>
-          <p style="margin: 5px 0;"><strong>Phone:</strong> ${metadata.customer_phone}</p>
-          ${metadata.voucher_code ? `<p style="margin: 5px 0;"><strong>Voucher Used:</strong> ${metadata.voucher_code}</p>` : ''}
-        </div>
+            <!-- Rooms Section -->
+            <div style="margin: 40px 0;">
+              <h2 style="margin: 0 0 20px 0; font-size: 14px; font-weight: 400; letter-spacing: 2px; text-transform: uppercase; color: #000;">Room Packages</h2>
+              <table style="width: 100%; border-collapse: collapse;">
+                ${roomsHtml}
+              </table>
+            </div>
 
-        <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 30px;">
-          <h2 style="margin-top: 0; color: #667eea; font-size: 20px;">What's Next?</h2>
-          <p style="margin: 5px 0;">✅ You'll receive further instructions via email within 24 hours</p>
-          <p style="margin: 5px 0;">✅ Our team will contact you to schedule your consultation</p>
-          <p style="margin: 5px 0;">✅ Keep this email for your records</p>
-        </div>
+            <!-- Add-ons Section -->
+            ${addons.length > 0 ? `
+            <div style="margin: 40px 0;">
+              <h2 style="margin: 0 0 20px 0; font-size: 14px; font-weight: 400; letter-spacing: 2px; text-transform: uppercase; color: #000;">Add-ons</h2>
+              <table style="width: 100%; border-collapse: collapse;">
+                ${addonsHtml}
+              </table>
+            </div>
+            ` : ''}
 
-        <p style="font-size: 16px; margin-top: 30px;">
-          If you have any questions, please don't hesitate to contact us.
-        </p>
+            <!-- Savings Section -->
+            ${savingsHtml}
 
-        <p style="font-size: 16px; margin-bottom: 0;">
-          Best regards,<br>
-          <strong>Your Business Name</strong>
-        </p>
+            <!-- Total -->
+            <div style="margin: 40px 0; padding: 20px 0; border-top: 2px solid #000; border-bottom: 2px solid #000;">
+              <table style="width: 100%;">
+                <tr>
+                  <td style="font-size: 18px; letter-spacing: 1px;">Total paid</td>
+                  <td style="text-align: right; font-size: 18px; letter-spacing: 1px;">£${(session.amount_total / 100).toFixed(2)}</td>
+                </tr>
+              </table>
+            </div>
 
-      </div>
+            <!-- Customer Details -->
+            <div style="margin: 40px 0;">
+              <h2 style="margin: 0 0 20px 0; font-size: 14px; font-weight: 400; letter-spacing: 2px; text-transform: uppercase; color: #000;">Your Details</h2>
+              <table style="width: 100%;">
+                <tr>
+                  <td style="padding: 8px 0; width: 120px;">Name</td>
+                  <td style="padding: 8px 0;">${metadata.customer_name}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0;">Email</td>
+                  <td style="padding: 8px 0;">${session.customer_email}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0;">Phone</td>
+                  <td style="padding: 8px 0;">${metadata.customer_phone}</td>
+                </tr>
+              </table>
+            </div>
 
-      <div style="text-align: center; margin-top: 30px; padding: 20px; color: #666; font-size: 12px;">
-        <p>This is an automated confirmation email.</p>
-        <p>Payment ID: ${session.id}</p>
-      </div>
+            <!-- What's Next Section -->
+            <div style="margin: 60px 0 40px 0; padding: 40px; border: 1px solid #000;">
+              <h2 style="margin: 0 0 30px 0; font-size: 14px; font-weight: 400; letter-spacing: 2px; text-transform: uppercase; text-align: center;">What's Next</h2>
+              
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 20px 0; border-bottom: 1px solid #e5e5e5;">
+                    <div style="font-size: 16px; margin-bottom: 8px;">1. Schedule a meeting with us</div>
+                    <a href="https://calendly.com/" style="color: #000; text-decoration: underline;">Book your consultation →</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 20px 0;">
+                    <div style="font-size: 16px; margin-bottom: 8px;">2. How to measure your room</div>
+                    <a href="#" style="color: #000; text-decoration: underline;">View measurement guide →</a>
+                  </td>
+                </tr>
+              </table>
+            </div>
+
+            <!-- Footer -->
+            <div style="margin-top: 60px; padding-top: 40px; border-top: 1px solid #e5e5e5; text-align: center; color: #666;">
+              <p style="margin: 0 0 10px 0; font-size: 12px; line-height: 1.6;">
+                This is an automated confirmation email.
+              </p>
+              <p style="margin: 0; font-size: 12px; line-height: 1.6;">
+                Payment ID: ${session.id}
+              </p>
+            </div>
+
+          </td>
+        </tr>
+      </table>
 
     </body>
     </html>
