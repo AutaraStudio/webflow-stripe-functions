@@ -89,14 +89,20 @@ exports.handler = async (event) => {
     const totalDiscount = totals.discount + totals.voucherDiscount;
     
     if (totalDiscount > 0) {
-      // Build discount description
+      // Build discount description (max 40 chars for Stripe)
       let discountDescription = '';
       if (totals.discount > 0 && voucher && totals.voucherDiscount > 0) {
-        discountDescription = `Multi-room (15%) + Voucher ${voucher.code} (${voucher.amount}%)`;
+        // Both discounts - keep it short
+        discountDescription = `Multi-room + ${voucher.code}`;
       } else if (totals.discount > 0) {
         discountDescription = 'Multi-room discount (15%)';
       } else if (voucher && totals.voucherDiscount > 0) {
-        discountDescription = `Voucher: ${voucher.code} (${voucher.amount}%)`;
+        discountDescription = `Voucher: ${voucher.code}`;
+      }
+
+      // Ensure name is within 40 character limit
+      if (discountDescription.length > 40) {
+        discountDescription = discountDescription.substring(0, 40);
       }
 
       const combinedCoupon = await stripe.coupons.create({
