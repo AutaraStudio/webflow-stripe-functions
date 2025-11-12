@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Netlify functions for Stripe checkout",
   "dependencies": {
-    "stripe": "^14.0.0"
+    "stripe": "^14.0.0",
+    "resend": "^3.0.0"
   }
 }
