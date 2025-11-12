@@ -43,7 +43,7 @@ exports.handler = async (event) => {
             name: roomData.quantity > 1 ? `${roomData.quantity} x ${roomName}` : roomName,
             description: 'Room Package',
           },
-          unit_price: Math.round(roomData.totalPrice * 100), // Stripe uses cents
+          unit_amount: Math.round(roomData.totalPrice * 100), // FIXED: Changed from unit_price to unit_amount
         },
         quantity: 1,
       });
@@ -59,7 +59,7 @@ exports.handler = async (event) => {
             name: addonName,
             description: 'Addon',
           },
-          unit_price: Math.round(addonData.price * 100),
+          unit_amount: Math.round(addonData.price * 100), // FIXED: Changed from unit_price to unit_amount
         },
         quantity: 1,
       });
