@@ -40,7 +40,7 @@ exports.handler = async (event) => {
     try {
       // Send confirmation email to customer
       await resend.emails.send({
-        from: 'Where Rooms Begin <onboarding@resend.dev>',
+        from: 'Where Rooms Begin <hello@whereroomsbegin.com>',
         to: session.customer_email,
         subject: 'Booking Confirmation',
         html: customerEmailHtml,
@@ -52,7 +52,7 @@ exports.handler = async (event) => {
       const adminEmails = ['matt@autara.studio', 'hello@whereroomsbegin.com'];
       
       await resend.emails.send({
-        from: 'Where Rooms Begin <onboarding@resend.dev>',
+        from: 'Where Rooms Begin <hello@whereroomsbegin.com>',
         to: adminEmails,
         subject: `New Order from ${session.metadata.customer_name} - £${(session.amount_total / 100).toFixed(2)}`,
         html: adminEmailHtml,
