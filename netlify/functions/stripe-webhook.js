@@ -235,7 +235,7 @@ function buildCustomerEmailHtml(session, lineItems) {
                 <tr>
                   <td style="padding: 20px 0;">
                     <div style="font-size: 16px; margin-bottom: 8px;">2. How to measure your room</div>
-                    <a href="#" style="color: #000; text-decoration: underline;">View measurement guide →</a>
+                    <a href="https://cdn.prod.website-files.com/68fb85ec75c72f4adb7abbd4/6920b82fa56fbee1fc06f973_Measuring%20Your%20Room.pdf" style="color: #000; text-decoration: underline;">View measurement guide →</a>
                   </td>
                 </tr>
               </table>
