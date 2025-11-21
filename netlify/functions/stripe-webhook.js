@@ -229,7 +229,7 @@ function buildCustomerEmailHtml(session, lineItems) {
                 <tr>
                   <td style="padding: 20px 0; border-bottom: 1px solid #e5e5e5;">
                     <div style="font-size: 16px; margin-bottom: 8px;">1. Schedule a meeting with us</div>
-                    <a href="https://calendly.com/" style="color: #000; text-decoration: underline;">Book your consultation →</a>
+                    <a href="https://calendly.com/victoria-houseofstoreys/30min?mon" style="color: #000; text-decoration: underline;">Book your consultation →</a>
                   </td>
                 </tr>
                 <tr>
